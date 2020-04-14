@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minesweeper</title>
+    <style>
+        .box{
+            height: auto;
+            /*width: 540px;*/
+            border: 1px solid #999;
+            margin: 0 auto;
+            padding: 20px;
+            /* background-color: ivory; */
+        }
+        .btn{
+            margin: 20px auto;
+            display: block;
+            width: 80px;
+            height: 25px;
+        }
+        p{
+            text-align: center;
+            font-size: xx-large;
+            margin-bottom: 10px;
+        }
+        .suqare-line{
+            height: 32px
+        }
+        .lei_square{
+            margin: 0 auto;
+            text-align: center;
+        }
+        .lei_square div span{
+            vertical-align: middle;
+            display: inline-block;
+            background: lightgray;
+            height: 30px;
+            width: 30px;
+            /* margin: 5px 5px; */
+            text-align: center;
+            line-height: 30px;
+            /*color: darkslateblue;*/
+            color: white;
+            border: 1px solid black
+        }
+        .lei_square div span .clicked{
+            color: white; !important;
+            background: cadetblue; !important;
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <!--    <button class="btn">游戏开始</button>-->
+    <div class="lei">
+        <p>Minesweeper</p>
+        <div class="lei_square">
+        </div>
+    </div>
+</div>
+<script>
+    const log = console.log.bind(console)
+    const ensure = (condition, message) => {
+        if (!condition) {
+            log('测试失败', message)
+        } else {
+            log('测试成功')
+        }
+    }
+    const e = (selector) => {
+        let element = document.querySelector(selector)
+        if (element === null) {
+            let s = `选择器 ${selector} 写错了, 请仔细检查并且复习三种基本的选择器`
+            alert(s)
+            //
+            return null
+        } else {
+            return element
+        }
+    }
+    const es = (selector) => {
+        let elements = document.querySelectorAll(selector)
+        if (elements.length === 0) {
+            let s = `选择器 ${selector} 写错了, 请仔细检查并且复习三种基本的选择器`
+            alert(s)
+            //
+            return []
+        } else {
+            return elements
+        }
+    }
+
+    //生成随机扫雷行
+    const random01 = () => {
+        let r = Math.random() - 0.2
+        return r > 0.7
+    }
+    //生成随机扫雷行
+    const randomLine09 = (n) => {
+        let r = []
+        for (let i = 0; i < n; i++) {
+            if (random01()) {
+                r.push(9)
+            } else {
+                r.push(0)
+            }
+        }
+        return r
+    }
+
+    //生成随机扫雷方阵
+    const square = (n) => {
+        let square = []
+        for (let i = 0; i < n; i++) {
+            let line = randomLine09(n)
+            square.push(line)
+        }
+        return square
+    }
+
+    //克隆数组
+    const clonedSquare = (array) => {
+        let s = []
+        for (let i = 0; i < array.length; i++) {
+            let line = array[i]
+            let l = line.slice(0)
+            s.push(l)
+        }
+        return s
+    }
+
+    //不越界标记,标记周围有几个雷
+    const plus1 = (array, x, y) => {
+        // 1. array[x][y] 不能是 9
+        // x 和 y 符合条件, 比如不能越界
+        let n = array.length
+        if (x >= 0 && x < n && y >= 0 && y < n) {
+            if (array[x][y] !== 9) {
+                array[x][y] += 1
+            }
+        }
+    }
+
+    //标记周围
+    const markAround = (array, x, y) => {
+        if (array[x][y] === 9) {
+            // 标记周围 8 个
+            // 标记的时候需要判断是不是可以标记
+            // 比如要标记左上角, 要判断 x > 0, y > 0
+            // 这种判断很麻烦, 我们直接用函数来做
+            // 具体的处理逻辑丢给函数
+
+            // 先标记上边 3 个
+            plus1(array, x - 1, y - 1)
+            plus1(array, x - 1, y)
+            plus1(array, x - 1, y + 1)
+
+            // 标记中间 2 个
+            plus1(array, x, y - 1)
+            plus1(array, x, y + 1)
+
+            // 标记下边 3 个
+            plus1(array, x + 1, y - 1)
+            plus1(array, x + 1, y)
+            plus1(array, x + 1, y + 1)
+        }
+    }
+
+    //扫雷终级
+    //array是square(9)，返回的square是九行九列包含0和9的数组方阵
+    const markedSquare = (array) => {
+        let square = clonedSquare(array)
+        for (let i = 0; i < square.length; i++) {
+            let line = square[i]
+            for (let j = 0; j < line.length; j++) {
+                markAround(square, i, j)
+            }
+        }
+        //这时的square已经标记完毕了
+        // console.log('square is', square)
+        return square
+    }
+
+    //给所有元素绑定事件
+    const bindAll = (elements, eventName, callback) => {
+        for (let i = 0; i < elements.length; i++) {
+            let tag = elements[i]
+            tag.addEventListener(eventName, callback)
+        }
+    }
+
+    //返回页面内元素
+    //data-n是元素的标号（周围有几颗雷），data-i是元素在第几行，data-j是元素在第几列
+    const templateTodo = (line, i) => {
+        log('line is', line)
+        let square = ''
+        for (let j = 0; j < line.length; j++) {
+            let number = (line[j])
+            let lineDIv = `<span data-n='${number}' data-i="${i}" data-j="${j}"></span>`
+            square += lineDIv
+        }
+        let t = `<div class='suqare-line'>${square}</div>`
+        return t
+    }
+
+    //将雷方阵放入页面
+    const put = (div) => {
+        let SelectorDiv = div
+        //s是随机扫雷方阵，包含0和9
+        let s = square(16)
+        //saoleiSquare是标记后的方阵，包含周围雷数和雷，包含9个数组，每个数组中包含9个元素
+        let saoleiSquare = markedSquare(s)
+        let n = saoleiSquare.length
+        log('saoleiSquare is', saoleiSquare)
+        for (let i = 0; i < n; i++) {
+            let line = saoleiSquare[i]
+            let t = templateTodo(line, i)
+            SelectorDiv.insertAdjacentHTML('beforeend', t)
+        }
+        return saoleiSquare
+    }
+
+    //改变样式
+    const changeStyle = (target) => {
+        // let block = target.closest('.lei_square')
+        target.style.color = 'white'
+        target.style.backgroundColor = 'cadetblue'
+        target.classList.add('clicked')
+    }
+
+    //点击的target如果是0，就把周围都掀开
+    const NotBoom = (target) => {
+        log('target.dataset', target.dataset.n)
+        let span_x_top = String(Number(target.dataset.i) - 1)
+        let span_x_bottom = String(Number(target.dataset.i) + 1)
+        let span_y_left = String(Number(target.dataset.j) - 1)
+        let span_y_right = String(Number(target.dataset.j) + 1)
+        let spans = es('span')
+        let count = 0
+        if (target.dataset.n !== String(0)) {
+            return 1
+        } else if (target.dataset.n === String(0)) {
+            for (let i = 0; i < spans.length; i++) {
+                // 左上角
+                if (spans[i].dataset.i === span_x_top && spans[i].dataset.j === span_y_left) {
+                    spans[i].innerHTML = spans[i].dataset.n
+                    changeStyle(spans[i])
+                    // NotBoom(spans[i])
+                }
+                //上方
+                else if (spans[i].dataset.i === span_x_top && spans[i].dataset.j === target.dataset.j) {
+                    log('top执行了')
+                    spans[i].innerHTML = spans[i].dataset.n
+                    changeStyle(spans[i])
+                    // NotBoom(spans[i])
+                }
+                //右上角
+                else if (spans[i].dataset.i === span_x_top && spans[i].dataset.j === span_y_right) {
+                    log('右上角执行了')
+                    spans[i].innerHTML = spans[i].dataset.n
+                    changeStyle(spans[i])
+                    // NotBoom(spans[i])
+
+                }
+                //左侧
+                else if (spans[i].dataset.i === target.dataset.i && spans[i].dataset.j === span_y_left) {
+                    spans[i].innerHTML = spans[i].dataset.n
+                    changeStyle(spans[i])
+                    // NotBoom(spans[i])
+
+                }
+                else if (spans[i].dataset.i === target.dataset.i && spans[i].dataset.j === span_y_right) {
+                    log('span_y_right执行了')
+                    spans[i].innerHTML = spans[i].dataset.n
+                    changeStyle(spans[i])
+                    // NotBoom(spans[i])
+                }
+                else if (spans[i].dataset.i === span_x_bottom && spans[i].dataset.j === span_y_left) {
+                    log('x_bootom执行了')
+                    spans[i].innerHTML = spans[i].dataset.n
+                    changeStyle(spans[i])
+                    // NotBoom(spans[i])
+                }
+                else if (spans[i].dataset.i === span_x_bottom && spans[i].dataset.j === target.dataset.j) {
+                    spans[i].innerHTML = spans[i].dataset.n
+                    changeStyle(spans[i])
+                    // NotBoom(spans[i])
+                }
+                else if (spans[i].dataset.i === span_x_bottom && spans[i].dataset.j === span_y_right) {
+                    spans[i].innerHTML = spans[i].dataset.n
+                    changeStyle(spans[i])
+                    // NotBoom(spans[i])
+                }
+            }
+        }
+    }
+
+    // 2、点击雷方块，弹出窗口，你点到雷了
+    const FindBoom = (event, saoleisquare) => {
+        let target = event.target
+        if (target.dataset.n === String(9)) {
+            log('findboom start')
+            //拿到所有span
+            let spans = es('span')
+            for (let i = 0; i < spans.length; i++) {
+                if (spans[i].dataset.n === String(9)) {
+                    spans[i].innerHTML = '雷'
+                    changeStyle(spans[i])
+                }
+            }
+            alert('游戏结束，你踩到雷了')
+        }
+    }
+    //方块点击事件
+    const nClick = (saoleiSquare) => {
+        let spans = es('span')
+        bindAll(spans, 'click', (event) => {
+            let target = event.target
+            let number = target.dataset.n
+            target.innerHTML = number
+            changeStyle(target)
+            // leiClicked(target, square)
+            FindBoom(event, saoleiSquare)
+            NotBoom(target)
+        })
+    }
+
+    const __main = () => {
+        //画出方阵
+        let div = e('.lei_square')
+        let square = put(div)
+        nClick(square)
+    }
+
+    __main()
+
+</script>
+</body>
+</html>
